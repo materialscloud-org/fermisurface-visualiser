@@ -1,5 +1,6 @@
 import { hexToRgba } from "../utils.js";
-import { marchingCubes } from "isosurface";
+
+import { marchingCubes, surfaceNets, marchingTetrahedra } from "isosurface";
 
 export function getFermiMesh3d(
   scalarFieldInfo,
@@ -7,11 +8,37 @@ export function getFermiMesh3d(
   color = "#0000ff",
   name = "Fermi Surface"
 ) {
-  const { dimensions, origin, spacing, scalarField, minVal, maxVal } =
+  const { dimensions, origin, spacing, scalarField, minval, maxval } =
     scalarFieldInfo;
-  const [nx, ny, nz] = dimensions;
 
   const t0 = performance.now();
+
+  if (1.1 * E < minval || 0.9 * E > maxval) {
+    return {
+      type: "mesh3d",
+      x: [0],
+      y: [0],
+      z: [0],
+      i: [0],
+      j: [0],
+      k: [0],
+      color,
+      opacity: 0.5,
+      flatshading: true,
+      name,
+      hoverinfo: "skip",
+      showlegend: true,
+      lighting: {
+        ambient: 1.0,
+        diffuse: 0.0,
+        specular: 0.0,
+        roughness: 0.0,
+        fresnel: 0,
+      },
+    };
+  }
+
+  const [nx, ny, nz] = dimensions;
 
   // Pre-allocate outer array
   const values = new Array(nx);

@@ -13,7 +13,6 @@
   "description": "",
   "dependencies": {
     "isosurface": "^1.0.0",
-    "marching-cubes-fast": "^0.0.172",
     "plotly.js": "^3.0.1",
     "plotly.js-dist": "^3.0.1",
     "vite": "^7.0.3"
