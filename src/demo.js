@@ -11,6 +11,11 @@ async function runDemo() {
     initialE: 5.5,
   });
 
+  // could be used to prebuild cache
+  // vis.buildCacheByRange(3, 10, 0.1);
+
+  console.log(vis.meshCache);
+
   const EInput = document.getElementById("E");
 
   const onUserInput = () => {

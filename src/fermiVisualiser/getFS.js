@@ -1,6 +1,6 @@
 import { hexToRgba } from "../utils.js";
 
-import { marchingCubes, surfaceNets, marchingTetrahedra } from "isosurface";
+import { marchingCubes } from "isosurface";
 
 export function getFermiMesh3d(
   scalarFieldInfo,
@@ -8,12 +8,11 @@ export function getFermiMesh3d(
   color = "#0000ff",
   name = "Fermi Surface"
 ) {
-  const { dimensions, origin, spacing, scalarField, minval, maxval } =
+  const { dimensions, origin, spacing, minval, maxval, formattedScalarField } =
     scalarFieldInfo;
 
-  const t0 = performance.now();
-
   if (1.1 * E < minval || 0.9 * E > maxval) {
+    // if outside of range just return a placeholder mesh
     return {
       type: "mesh3d",
       x: [0],
@@ -40,26 +39,6 @@ export function getFermiMesh3d(
 
   const [nx, ny, nz] = dimensions;
 
-  // Pre-allocate outer array
-  const values = new Array(nx);
-  let idx = 0;
-
-  for (let ix = 0; ix < nx; ix++) {
-    const arrY = new Array(ny);
-    for (let iy = 0; iy < ny; iy++) {
-      const arrZ = new Array(nz);
-      for (let iz = 0; iz < nz; iz++, idx++) {
-        const v = scalarField[idx];
-        arrZ[iz] = v === null ? Infinity : v;
-      }
-      arrY[iy] = arrZ;
-    }
-    values[ix] = arrY;
-  }
-
-  const t1 = performance.now();
-  console.log(`Array nested: ${(t1 - t0).toFixed(6)} ms`);
-
   // Physical bounds of the grid
   const bounds = [
     origin, // lower corner
@@ -70,40 +49,90 @@ export function getFermiMesh3d(
     ],
   ];
 
-  const t2 = performance.now();
-  console.log(`Bounds Computed : ${(t2 - t1).toFixed(6)} ms`);
+  //   // Get mesh geometry
+  // const mesh = marchingCubes(
+  //   [nx, ny, nz],
+  //   (x, y, z) => {
+  //     const ix = Math.floor((x - origin[0]) / spacing[0]);
+  //     const iy = Math.floor((y - origin[1]) / spacing[1]);
+  //     const iz = Math.floor((z - origin[2]) / spacing[2]);
 
-  // Get mesh geometry
+  //     const clamp = (v, max) => Math.min(Math.max(v, 0), max - 1);
+
+  //     return values[clamp(ix, nx)][clamp(iy, ny)][clamp(iz, nz)] - E;
+  //   },
+  //   bounds
+  // );
+
+  const invSpacingX = 1 / spacing[0];
+  const invSpacingY = 1 / spacing[1];
+  const invSpacingZ = 1 / spacing[2];
+  const nyz = ny * nz;
+
+  // const t2 = performance.now();
+  // Get mesh geometry - equivalent to above but uses a flattened array for fast indexing.
   const mesh = marchingCubes(
     [nx, ny, nz],
     (x, y, z) => {
-      const ix = Math.floor((x - origin[0]) / spacing[0]);
-      const iy = Math.floor((y - origin[1]) / spacing[1]);
-      const iz = Math.floor((z - origin[2]) / spacing[2]);
+      const ix = ((x - origin[0]) * invSpacingX) | 0; // fast integer conversion
+      const iy = ((y - origin[1]) * invSpacingY) | 0;
+      const iz = ((z - origin[2]) * invSpacingZ) | 0;
 
-      const clamp = (v, max) => Math.min(Math.max(v, 0), max - 1);
+      const idx = ix * nyz + iy * nz + iz;
 
-      return values[clamp(ix, nx)][clamp(iy, ny)][clamp(iz, nz)] - E;
+      // use pre-flattened formattedScalarField
+      // about a 25% speed increase
+      return formattedScalarField[idx] - E;
+
+      // --- slower nested method.
+      // return values3D[ix][iy][iz] - E;
     },
     bounds
   );
 
-  const t3 = performance.now();
-  console.log(`marchingCubes : ${(t3 - t2).toFixed(6)} ms`);
-
   const { positions, cells } = mesh;
 
-  const x = positions.map((v) => v[0]);
-  const y = positions.map((v) => v[1]);
-  const z = positions.map((v) => v[2]);
+  // const t3 = performance.now();
+  // console.log(`mC run took: ${(t3 - t2).toFixed(6)} ms`);
 
-  // Extract face indices
-  const i = cells.map((c) => c[0]);
-  const j = cells.map((c) => c[1]);
-  const k = cells.map((c) => c[2]);
+  // const x = positions.map((v) => v[0]);
+  // const y = positions.map((v) => v[1]);
+  // const z = positions.map((v) => v[2]);
 
-  const t4 = performance.now();
-  console.log(`Extraction and mapping made: ${(t4 - t3).toFixed(6)} ms`);
+  // const i = cells.map((c) => c[0]);
+  // const j = cells.map((c) => c[1]);
+  // const k = cells.map((c) => c[2]);
+
+  // const t4 = performance.now();
+  // console.log(`Extraction and mapping made: ${(t4 - t3).toFixed(6)} ms`);
+
+  // Get x,y,z & i,j,k (equivalent to above but slightly faster)
+  const nVertices = positions.length;
+  const nFaces = cells.length;
+
+  // Pre-allocate typed arrays
+  const x = new Float32Array(nVertices);
+  const y = new Float32Array(nVertices);
+  const z = new Float32Array(nVertices);
+
+  for (let v = 0; v < nVertices; v++) {
+    const p = positions[v];
+    x[v] = p[0];
+    y[v] = p[1];
+    z[v] = p[2];
+  }
+
+  // Face indices
+  const i = new Uint32Array(nFaces);
+  const j = new Uint32Array(nFaces);
+  const k = new Uint32Array(nFaces);
+
+  for (let f = 0; f < nFaces; f++) {
+    const c = cells[f];
+    i[f] = c[0];
+    j[f] = c[1];
+    k[f] = c[2];
+  }
 
   return {
     type: "mesh3d",
@@ -126,61 +155,5 @@ export function getFermiMesh3d(
       roughness: 0.0,
       fresnel: 0,
     },
-  };
-}
-
-export function getFermiIsosurface(
-  scalarFieldInfo,
-  E,
-  tolerance,
-  color = "#0000ff",
-  name = "Fermi Surface"
-) {
-  const { dimensions, origin, spacing, scalarField } = scalarFieldInfo;
-  const [nx, ny, nz] = dimensions;
-
-  const x = [],
-    y = [],
-    z = [];
-  for (let ix = 0; ix < nx; ix++) {
-    for (let iy = 0; iy < ny; iy++) {
-      for (let iz = 0; iz < nz; iz++) {
-        x.push(origin[0] + ix * spacing[0]);
-        y.push(origin[1] + iy * spacing[1]);
-        z.push(origin[2] + iz * spacing[2]);
-      }
-    }
-  }
-
-  const sF = scalarField.map((v) => (v === 0 ? null : v));
-  console.log(sF);
-
-  const colorscale = [
-    [0, color],
-    [1, color],
-  ];
-
-  return {
-    type: "isosurface",
-    x,
-    y,
-    z,
-    value: sF,
-    showlegend: true,
-    isomin: E - tolerance,
-    isomax: E + tolerance,
-    colorscale: colorscale, // colorscale or RdBu for multi or single band plots.
-    opacity: 0.45,
-    showscale: false,
-    name,
-    hoverinfo: "skip", // disable hover
-    lighting: {
-      ambient: 1.0,
-      diffuse: 0.0,
-      specular: 0.0,
-      roughness: 0.0,
-      fresnel: 0,
-    },
-    caps: { x: false, y: false, z: false },
   };
 }
