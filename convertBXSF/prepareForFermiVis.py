@@ -21,17 +21,19 @@ def export_multiple_scalar_fields_with_edges_to_json(
     scalar_fields_json = []
     for scalar_field_bz, band_name in zip(scalar_fields_bz, band_names):
 
-        # Replace NaNs with zero so JSON doesn't get NaN
-        safe_field = np.nan_to_num(scalar_field_bz, nan=0.0)
-
         # Round to 2 decimals
-        rounded_array = np.round(safe_field, 2).flatten(order="C")
+        rounded_array = np.round(scalar_field_bz, 2).flatten(order="C")
 
         # Further compress: convert e.g. 1.0 -> 1
-        rounded_list = [
-            int(x) if x.is_integer() else x
-            for x in rounded_array.tolist()
-        ]
+        rounded_array = [int(x) if x.is_integer() else x for x in rounded_array.tolist()]
+
+        # Convert nan to None for JSON null casting
+        rounded_list = [None if np.isnan(x) else x for x in rounded_array]
+
+        # Compute min/max ignoring None
+        numeric_values = [x for x in rounded_list if x is not None]
+        minval = float(np.min(numeric_values)) if numeric_values else None
+        maxval = float(np.max(numeric_values)) if numeric_values else None
 
         scalar_fields_json.append({
             "name": band_name,
@@ -39,7 +41,9 @@ def export_multiple_scalar_fields_with_edges_to_json(
                 "dimensions": [Nx, Ny, Nz],
                 "scalarField": rounded_list,
                 "origin": np.round(origin, 6).tolist(),
-                "spacing": np.round(spacing, 6).tolist()
+                "spacing": np.round(spacing, 6).tolist(),
+                "minval": minval,
+                "maxval": maxval
             }
         })
 
@@ -74,12 +78,18 @@ def main():
     )
     parser.add_argument(
         "-b", "--bands", type=str,
-        help="Comma-separated list of band indices to export (1-based; default: all bands)"
+        help="Comma-separated list of band indices to export (default: all bands)"
     )
-    parser.add_argument("-m",
-        "--mask-outside-bz", action="store_true",
-        help="Mask scalar field values outside the Brillouin Zone by setting them to NaN"
+
+    parser.add_argument(
+        "-nm",
+        "--no-mask-outside-bz",
+        dest="no_mask_outside_bz",
+        action="store_true",
+        default=False,
+        help="Dont mask values outside of the brillioun Zone"
     )
+
 
     args = parser.parse_args()
 
@@ -92,13 +102,13 @@ def main():
     min_corner = grid_points.min(axis=0)
     max_corner = grid_points.max(axis=0)
 
-    if args.mask_outside_bz:
+    if args.no_mask_outside_bz:
+        print("=== Using full grid, no masking ===")
+        frac_coords = bz.cartesian_to_fractional(grid_points)
+    else:
         print("=== Filtering points inside BZ ===")
         points_in_bz, mask = bz.filter_points_in_bz(grid_points)
         frac_coords = bz.cartesian_to_fractional(points_in_bz)
-    else:
-        print("=== Using full grid, no masking ===")
-        frac_coords = bz.cartesian_to_fractional(grid_points)
 
     if args.bands:
         band_indices = [int(idx.strip()) - 1 for idx in args.bands.split(",")]
@@ -112,14 +122,15 @@ def main():
         print(f"\n=== Processing Band {band_idx+1} ===")
         interpolated_values = bz.interpolate_scalar_field(frac_coords, band_index=band_idx)
 
-        if args.mask_outside_bz:
+        if args.no_mask_outside_bz:
+            # Interpolate everywhere, reshape directly
+            scalar_field_bz = interpolated_values.reshape(shape)
+        else:
             # Create full grid, fill with NaN, insert values only inside BZ
             scalar_field_flat = np.full((np.prod(shape),), np.nan)
             scalar_field_flat[mask] = interpolated_values
             scalar_field_bz = scalar_field_flat.reshape(shape)
-        else:
-            # Interpolate everywhere, reshape directly
-            scalar_field_bz = interpolated_values.reshape(shape)
+
 
         print(f"Interpolated stats: min={np.nanmin(interpolated_values)}, max={np.nanmax(interpolated_values)}")
         scalar_fields_bz.append(scalar_field_bz)

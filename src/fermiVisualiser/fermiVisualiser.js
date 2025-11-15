@@ -1,6 +1,6 @@
 import Plotly from "plotly.js-dist";
 import { getBZTraces } from "./getBZ.js";
-import { getFermiIsosurface } from "./getFS.js";
+import { getFermiIsosurface, getFermiMesh3d } from "./getFS.js";
 import { colorPalette } from "../utils.js";
 
 export class FermiVisualiser {
@@ -8,7 +8,6 @@ export class FermiVisualiser {
     this.containerDiv = containerDiv;
     this.dataObject = dataObject;
     this.currentE = options.initialE ?? 5.5;
-    this.currentTol = options.initialTol ?? 0.0;
 
     this.bzEdgesTrace = null;
     this.scalarFieldTraces = null;
@@ -27,10 +26,9 @@ export class FermiVisualiser {
     this.bzEdgesTrace.showlegend = false;
 
     this.scalarFieldTraces = this.dataObject.scalarFields.map((field, idx) =>
-      getFermiIsosurface(
+      getFermiMesh3d(
         field.scalarFieldInfo,
         this.currentE,
-        this.currentTol,
         colorPalette[idx % colorPalette.length],
         field.name ?? `Band ${idx + 1}`
       )
@@ -62,29 +60,27 @@ export class FermiVisualiser {
     });
   }
 
-  update(E, tolerance) {
+  update(E) {
     if (!this.plotInitialized) {
       console.warn("Plot not initialized yet.");
       return;
     }
 
     this.currentE = E;
-    this.currentTol = tolerance;
 
     const oldTraces = this.containerDiv.data;
     const visibleStates = oldTraces.map((trace) => trace.visible);
 
-    this.scalarFieldTraces = this.dataObject.scalarFields.map((field, idx) =>
-      getFermiIsosurface(
+    this.scalarFieldMesh = this.dataObject.scalarFields.map((field, idx) =>
+      getFermiMesh3d(
         field.scalarFieldInfo,
         E,
-        tolerance,
         colorPalette[idx % colorPalette.length],
         field.name ?? `Band ${idx + 1}`
       )
     );
 
-    const newTraces = [this.bzEdgesTrace, ...this.scalarFieldTraces];
+    const newTraces = [this.bzEdgesTrace, ...this.scalarFieldMesh];
 
     for (let i = 0; i < newTraces.length; i++) {
       if (visibleStates[i] !== undefined) {
