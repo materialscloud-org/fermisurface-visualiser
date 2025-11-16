@@ -13,6 +13,8 @@ export class FermiVisualiser {
     this.scalarFieldTraces = null;
     this.plotInitialized = false;
 
+    this.planes = dataObject.brillouinZone.planes;
+
     // TODO: should also preset the camera positon, to be looking down axis.
     this.defaultLayout = {
       title: "Brillouin Zone + Scalar Fields",
@@ -85,7 +87,7 @@ export class FermiVisualiser {
       getFermiMesh3d(
         field.scalarFieldInfo,
         this.currentE,
-        this.dataObject.brillouinZone.planes,
+        this.planes,
         colorPalette[idx % colorPalette.length],
         field.name ?? `Band ${idx + 1}`
       )
@@ -140,12 +142,13 @@ export class FermiVisualiser {
         getFermiMesh3d(
           field.scalarFieldInfo,
           E,
-          this.dataObject.brillouinZone.planes,
+          this.planes,
           colorPalette[idx % colorPalette.length],
           field.name ?? `Band ${idx + 1}`
         )
       );
       timeTaken = performance.now() - initialTime;
+      console.log(timeTaken);
       // add to cache
       this.meshCache.set(E, scalarFieldMesh);
 
@@ -244,6 +247,7 @@ export class FermiVisualiser {
           getFermiMesh3d(
             field.scalarFieldInfo,
             E,
+            this.planes,
             colorPalette[idx % colorPalette.length],
             field.name ?? `Band ${idx + 1}`
           )

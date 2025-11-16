@@ -95,6 +95,10 @@ Replace `src/example_data/data.json` with your own converted dataset.
       - I have some plane duplication function, but this may be a little suspect on different data # TODO test this.
       - These cleaved meshes are significantly reduced in size (1/10th the previous), maybe these could be cached and loaded from a backend (via some expensive pipeline), this also means that loading them from the visualisercache is a little faster...
 
+- Fix small bug with low-res grids
+  - The spanning axis currently recieves a padding (5%) this means grids less than 20 (100/5) dont get to span the whole BZ space (1 datapoint < 5%)
+  - switch to use a absolute grid padding
+
 ## Testing on 100x100x100 grid - performance notes etc.
 
 - Debouncing is a free feature that could be tuned to proportionally to the size of the data array.
