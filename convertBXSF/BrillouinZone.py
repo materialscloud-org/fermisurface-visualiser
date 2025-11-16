@@ -41,6 +41,45 @@ class BrillouinZoneData:
 
         return vertices, indices
 
+    def get_bz_faces_with_planes(self):
+        """
+        Returns:
+            vertices: ndarray (N,3)
+            faces: list of [i0, i1, i2]
+            planes: list of dicts { normal: [nx,ny,nz], D: offset }
+        """
+        vertices, faces = self.get_bz_vertices_and_faces()
+        planes = []
+
+        # compute center of BZ to define "inside"
+        bz_center = np.mean(vertices, axis=0)
+
+        for f in faces:
+            i0, i1, i2 = f
+            v0, v1, v2 = vertices[i0], vertices[i1], vertices[i2]
+
+            # Compute normal
+            u = v1 - v0
+            v = v2 - v0
+            normal = np.cross(u, v)
+            norm_length = np.linalg.norm(normal)
+            if norm_length == 0:
+                continue  # degenerate face
+            normal /= norm_length
+
+            # Plane offset
+            D = float(np.dot(normal, v0))
+
+            # Ensure normal points outward from BZ center
+            if np.dot(normal, bz_center - v0) > 0:
+                normal = -normal
+                D = -D
+
+            planes.append({"normal": normal.tolist(), "D": D})
+
+        return vertices.tolist(), faces.tolist(), planes
+
+
 
 
     def get_bz_outline_edges(self):
