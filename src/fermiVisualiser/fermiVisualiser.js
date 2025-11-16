@@ -7,29 +7,51 @@ export class FermiVisualiser {
   constructor(containerDiv, dataObject, options = {}) {
     this.containerDiv = containerDiv;
     this.dataObject = dataObject;
-    this.currentE = options.initialE ?? 5.5; // def to 5.5 eV
+    this.currentE = options.initialE ?? 5.5;
 
     this.bzEdgesTrace = null;
     this.scalarFieldTraces = null;
     this.plotInitialized = false;
 
+    // TODO: should also preset the camera positon, to be looking down axis.
     this.defaultLayout = {
       title: "Brillouin Zone + Scalar Fields",
       scene: {
         xaxis: { visible: false },
         yaxis: { visible: false },
         zaxis: { visible: false },
+        camera: {
+          projection: {
+            type: "orthographic", // no depth perseception.
+          },
+        },
       },
     };
 
-    // Precompute nested arrays for scalar fields
-    for (const field of this.dataObject.scalarFields) {
-      if (!field.scalarFieldInfo.values3D) {
-        field.scalarFieldInfo.values3D = this._nestScalarField(
-          field.scalarFieldInfo
-        );
-      }
-    }
+    this.defaultConfig = {
+      displayModeBar: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: [
+        "zoom3d",
+        "pan3d",
+        "orbitRotation",
+        "tableRotation",
+        "resetCameraLastSave3d",
+        "hoverClosest3d",
+      ],
+      modeBarButtonsToAdd: [
+        {
+          name: "Toggle view type",
+          icon: Plotly.Icons.autoscale,
+          click: function (gd) {
+            const current = gd.layout.scene.camera.projection.type;
+            const next =
+              current === "perspective" ? "orthographic" : "perspective";
+            Plotly.relayout(gd, { "scene.camera.projection.type": next });
+          },
+        },
+      ],
+    };
 
     for (const field of this.dataObject.scalarFields) {
       this._convertNullsToInf(field.scalarFieldInfo);
@@ -43,7 +65,7 @@ export class FermiVisualiser {
     }
     this.totalDimensionality = totalSize;
 
-    // simple cache
+    // simple cache via a map
     this.meshCache = new Map();
 
     // plot initialisation.
@@ -52,8 +74,6 @@ export class FermiVisualiser {
 
   async initializePlot() {
     const { vertices, edges } = this.dataObject.brillouinZone;
-
-    console.log(this.totalDimensionality);
 
     this.bzEdgesTrace = getBZTraces(vertices, edges, {
       color: "#111",
@@ -76,7 +96,8 @@ export class FermiVisualiser {
     await Plotly.newPlot(
       this.containerDiv,
       [this.bzEdgesTrace, ...this.scalarFieldTraces],
-      this.defaultLayout
+      this.defaultLayout,
+      this.defaultConfig
     );
     this.plotInitialized = true;
 
@@ -85,6 +106,7 @@ export class FermiVisualiser {
       if (!scene) return;
       const currentCamera = { ...scene.camera };
       setTimeout(() => {
+        // delay the relayout to avoid double firing events.
         Plotly.relayout(this.containerDiv, { "scene.camera": currentCamera });
       }, 0);
     });
@@ -166,7 +188,7 @@ export class FermiVisualiser {
     return new Map(this.meshCache);
   }
 
-  /** Private helper: builds the nested [nx][ny][nz] array */
+  /** Private helper: Currently unused - builds the nested [nx][ny][nz] array */
   _nestScalarField(scalarFieldInfo) {
     const { scalarField, dimensions } = scalarFieldInfo;
     const [nx, ny, nz] = dimensions;
