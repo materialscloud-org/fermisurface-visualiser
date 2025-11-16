@@ -85,6 +85,7 @@ export class FermiVisualiser {
       getFermiMesh3d(
         field.scalarFieldInfo,
         this.currentE,
+        this.dataObject.brillouinZone.planes,
         colorPalette[idx % colorPalette.length],
         field.name ?? `Band ${idx + 1}`
       )
@@ -139,6 +140,7 @@ export class FermiVisualiser {
         getFermiMesh3d(
           field.scalarFieldInfo,
           E,
+          this.dataObject.brillouinZone.planes,
           colorPalette[idx % colorPalette.length],
           field.name ?? `Band ${idx + 1}`
         )

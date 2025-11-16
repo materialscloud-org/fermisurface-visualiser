@@ -88,14 +88,16 @@ Replace `src/example_data/data.json` with your own converted dataset.
 ## **(WIP) and potential lowhanging fruit**
 
 - Have switched to using a on the fly marching cubes algorithm, and that converts, null to infinity on BZ boundaries.
-  - This fixed the harsh discontinuous plane but still has some stepping artifacts.
-    - This could be improved by, passing the boundaries to the mc algorithm enforcing mesh cleavage there.
-    - Alternatively, mesh cleavage can be handled from the unmasked data, with some care in deciding which side of the plane to keep.
-      There seems to be a tonne of strategies to do this but in my attempts i got a misaligned mesh.
+
+  - Now post process the resulting mesh for extremely nice plane cleavage,
+
+    - I think im perhaps over-sending planes (20 instead of 8 on the example data).
+      - I have some plane duplication function, but this may be a little suspect on different data # TODO test this.
+      - These cleaved meshes are significantly reduced in size (1/10th the previous), maybe these could be cached and loaded from a backend (via some expensive pipeline), this also means that loading them from the visualisercache is a little faster...
 
 ## Testing on 100x100x100 grid - performance notes etc.
 
-- Debouncing is a free feature that can actually scale proportionally to the size of the data array.
+- Debouncing is a free feature that could be tuned to proportionally to the size of the data array.
   - Alternative is a 'Go' button that does the recalculation only then...
   - Some how offloading mesh calculation to a webworker through wasm (or even just a generic webworker) would be amazing but hard
   - Low-resolution - could do the live updates, while the high resolution churns away in the background

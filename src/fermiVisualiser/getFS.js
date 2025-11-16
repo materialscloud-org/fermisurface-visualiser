@@ -1,10 +1,13 @@
 import { hexToRgba } from "../utils.js";
 
+import { clipMeshToPlanes } from "./clipMesh.js";
+
 import { marchingCubes } from "isosurface";
 
 export function getFermiMesh3d(
   scalarFieldInfo,
   E,
+  slicedPlanes = [],
   color = "#0000ff",
   name = "Fermi Surface"
 ) {
@@ -69,31 +72,37 @@ export function getFermiMesh3d(
   const invSpacingZ = 1 / spacing[2];
   const nyz = ny * nz;
 
-  // const t2 = performance.now();
+  const t2 = performance.now();
+
   // Get mesh geometry - equivalent to above but uses a flattened array for fast indexing.
   const mesh = marchingCubes(
     [nx, ny, nz],
     (x, y, z) => {
-      const ix = ((x - origin[0]) * invSpacingX) | 0; // fast integer conversion
+      const ix = ((x - origin[0]) * invSpacingX) | 0;
       const iy = ((y - origin[1]) * invSpacingY) | 0;
       const iz = ((z - origin[2]) * invSpacingZ) | 0;
 
       const idx = ix * nyz + iy * nz + iz;
-
-      // use pre-flattened formattedScalarField
-      // about a 25% speed increase
-      return formattedScalarField[idx] - E;
-
-      // --- slower nested method.
-      // return values3D[ix][iy][iz] - E;
+      return formattedScalarField[idx] - E; // This can probably now be the normal scalarField
     },
     bounds
   );
 
-  const { positions, cells } = mesh;
+  const t3 = performance.now();
+  console.log(`mC run took: ${t3 - t2} ms`);
+  // TODO - performance improve this - potentially with idk some other shit.
 
-  // const t3 = performance.now();
-  // console.log(`mC run took: ${(t3 - t2).toFixed(6)} ms`);
+  const planes = slicedPlanes;
+  const { positions, cells } = clipMeshToPlanes(
+    mesh.positions,
+    mesh.cells,
+    planes
+  );
+  // old method (no clipping [since approximated at data level.])
+  //const { positions, cells} = mesh;
+
+  const t4 = performance.now();
+  console.log(`mesh Clipping run took: ${t4 - t3} ms - `);
 
   // const x = positions.map((v) => v[0]);
   // const y = positions.map((v) => v[1]);
