@@ -9,6 +9,14 @@ export class FermiVisualiser {
     this.dataObject = dataObject;
     this.currentE = options.initialE ?? 5.5;
 
+    // backend
+    this.worker = new Worker(
+      new URL("./fermiCacheWorker.js", import.meta.url),
+      {
+        type: "module",
+      }
+    );
+
     this.bzEdgesTrace = null;
     this.scalarFieldTraces = null;
     this.plotInitialized = false;
@@ -134,6 +142,7 @@ export class FermiVisualiser {
     let timeTaken;
     // Look in cache
     if (this.meshCache.has(E)) {
+      console.log("cacheHit");
       scalarFieldMesh = this.meshCache.get(E);
       timeTaken = performance.now() - initialTime;
     } else {
@@ -148,13 +157,42 @@ export class FermiVisualiser {
         )
       );
       timeTaken = performance.now() - initialTime;
-      console.log(timeTaken);
       // add to cache
       this.meshCache.set(E, scalarFieldMesh);
 
-      // if the calculation was exceedingly short we can build the cache on both sides very deep.
-      if (timeTaken < 50) {
-        this.buildCacheByRange(E - 0.5, E + 0.5, 0.1);
+      // here we do some crazy precaching...
+      // since its kind of insane to run (potentially) so much compute off the main thread
+      // for data that may never be seen i'm keeping this very obviously written badly so
+      //  it will stick out as a sore thumb...
+      // TODO - discuss whether it makes any amount of sense to have something like this...
+      const ranges = [
+        { maxTime: 250, range: 10.0 },
+        { maxTime: 400, range: 5.0 },
+        { maxTime: 500, range: 2.0 }, // additional range if desired
+      ];
+      for (const { maxTime, range } of ranges) {
+        if (timeTaken < maxTime) {
+          console.log(
+            `WEB WORKER IS BUILDING A CACHE BECAUSE LAST CALC TOOK <${maxTime}ms`
+          );
+
+          if (this.currentE < this.oldE) {
+            // stack a large positive cache
+            this.buildCacheByRangeWorker(E, E - range, 0.1);
+            // small negative cache
+            this.buildCacheByRangeWorker(E, E + 0.5 * range, 0.1);
+
+            break; //
+          }
+          if (this.currentE > this.oldE) {
+            // negative cache
+            this.buildCacheByRangeWorker(E, E + range, 0.1);
+            // small positive cache
+            this.buildCacheByRangeWorker(E, E - 0.5 * range, 0.1);
+
+            break;
+          }
+        }
       }
     }
 
@@ -257,5 +295,55 @@ export class FermiVisualiser {
     }
 
     return this.meshCache;
+  }
+
+  // equivalent to the above method, but crazily runs off the main thread.
+  // In principle this allows building a very deep cache without blocking current DOM rendering.
+  // 1. Initial plot can load
+  // 2. This can be called - and the plot (or other content) isnt locked from updates.
+  async buildCacheByRangeWorker(EMIN, EMAX, STEPSIZE) {
+    if (!this.worker) {
+      this.worker = new Worker(
+        new URL("./fermiCacheWorker.js", import.meta.url)
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      const energiesProcessed = new Set();
+
+      this.worker.onmessage = (event) => {
+        const data = event.data;
+
+        if (data.done) {
+          resolve(this.meshCache);
+          return;
+        }
+
+        const { E, meshes } = data;
+        const roundedE = parseFloat(E.toFixed(3));
+        this.meshCache.set(roundedE, meshes);
+        energiesProcessed.add(roundedE);
+
+        // Optional: update plot if this is the currently selected E
+        if (Math.abs(this.currentE - roundedE) < 1e-6 && this.plotInitialized) {
+          const newTraces = [this.bzEdgesTrace, ...meshes];
+          Plotly.react(this.containerDiv, newTraces, this.defaultLayout);
+        }
+      };
+
+      this.worker.onerror = (err) => {
+        reject(err);
+      };
+
+      // Start worker
+      this.worker.postMessage({
+        scalarFields: this.dataObject.scalarFields,
+        planes: this.planes,
+        EMIN,
+        EMAX,
+        STEPSIZE,
+        cachedEs: Array.from(this.meshCache.keys()),
+      });
+    });
   }
 }

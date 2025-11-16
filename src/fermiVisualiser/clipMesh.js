@@ -54,7 +54,6 @@ function clipTriangleToPlane(triangle, plane) {
 
 // Clip entire mesh to multiple planes
 export function clipMeshToPlanes(positions, cells, planes) {
-  console.log(positions);
   let newPositions = [];
   let newCells = [];
   let vertexMap = new Map(); // map from vertex string to index
@@ -87,7 +86,6 @@ export function clipMeshToPlanes(positions, cells, planes) {
       newCells.push(idxs);
     }
   }
-  console.log(newPositions);
 
   return { positions: newPositions, cells: newCells };
 }

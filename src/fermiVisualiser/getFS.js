@@ -89,7 +89,7 @@ export function getFermiMesh3d(
   );
 
   const t3 = performance.now();
-  console.log(`mC run took: ${t3 - t2} ms`);
+  // console.log(`mC run took: ${t3 - t2} ms`);
   // TODO - performance improve this - potentially with idk some other shit.
 
   const planes = slicedPlanes;
@@ -102,7 +102,7 @@ export function getFermiMesh3d(
   //const { positions, cells} = mesh;
 
   const t4 = performance.now();
-  console.log(`mesh Clipping run took: ${t4 - t3} ms - `);
+  // console.log(`mesh Clipping run took: ${t4 - t3} ms - `);
 
   // const x = positions.map((v) => v[0]);
   // const y = positions.map((v) => v[1]);
