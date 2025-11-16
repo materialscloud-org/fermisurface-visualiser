@@ -166,9 +166,9 @@ export class FermiVisualiser {
       //  it will stick out as a sore thumb...
       // TODO - discuss whether it makes any amount of sense to have something like this...
       const ranges = [
-        { maxTime: 250, range: 10.0 },
-        { maxTime: 400, range: 5.0 },
-        { maxTime: 500, range: 2.0 }, // additional range if desired
+        { maxTime: 20, range: 10.0 },
+        { maxTime: 40, range: 5.0 },
+        { maxTime: 50, range: 2.0 }, // additional range if desired
       ];
       for (const { maxTime, range } of ranges) {
         if (timeTaken < maxTime) {

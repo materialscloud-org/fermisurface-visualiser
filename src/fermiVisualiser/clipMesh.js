@@ -1,4 +1,5 @@
-// TOOD - performance maximise this, it seems to be a large chunk of the performance hit.
+// performance improvments can be found in the VERY hard to read clipMeshOpt.js
+// this is here mostly to maintain readibility and in case the new method has some bugs.
 
 // Helper: linear interpolation along edge for plane intersection
 function interpVertex(v1, v2, d1, d2) {

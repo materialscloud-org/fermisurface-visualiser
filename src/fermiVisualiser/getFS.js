@@ -1,6 +1,6 @@
 import { hexToRgba } from "../utils.js";
 
-import { clipMeshToPlanes } from "./clipMesh.js";
+import { clipMeshToPlanes } from "./clipMeshOpt.js";
 
 import { marchingCubes } from "isosurface";
 
@@ -102,7 +102,7 @@ export function getFermiMesh3d(
   //const { positions, cells} = mesh;
 
   const t4 = performance.now();
-  // console.log(`mesh Clipping run took: ${t4 - t3} ms - `);
+  console.log(`mesh Clipping run took: ${t4 - t3} ms - `);
 
   // const x = positions.map((v) => v[0]);
   // const y = positions.map((v) => v[1]);
