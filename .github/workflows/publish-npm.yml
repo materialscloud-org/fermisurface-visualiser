@@ -1,9 +1,9 @@
-name: Publish the Javascript lib on NPM
+name: Publish Fermisurface-Vis
 
 on:
   push:
     tags:
-      - "*" # trigger on any tag push
+      - "v*"
 
 jobs:
   publish_npm:
@@ -22,8 +22,11 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org/"
 
-      - run: npm ci
-      - run: npm run build
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
 
       - name: Publish to npm
         run: npm publish
