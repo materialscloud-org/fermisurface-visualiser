@@ -2,7 +2,11 @@ import { hexToRgba } from "../utils.js";
 
 import { clipMeshToPlanes } from "./clipMeshOpt.js";
 
-import { marchingCubes } from "isosurface";
+// Own hopefully fast and bug free implementation
+//  (about 10-20% faster than the isosurface impl.)
+import { marchingCubes } from "./marchingCubes.js";
+// isosurface
+// import { marchingCubes } from "isosurface";
 
 export function getFermiMesh3d(
   scalarFieldInfo,
@@ -89,7 +93,7 @@ export function getFermiMesh3d(
   );
 
   const t3 = performance.now();
-  // console.log(`mC run took: ${t3 - t2} ms`);
+  console.log(`mC run took: ${t3 - t2} ms`);
   // TODO - performance improve this - potentially with idk some other shit.
 
   const planes = slicedPlanes;
