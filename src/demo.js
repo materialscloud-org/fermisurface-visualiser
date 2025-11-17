@@ -2,9 +2,7 @@ import { FermiVisualiser } from "./fermiVisualiser/fermiVisualiser.js";
 import { debounce } from "./utils.js";
 
 async function runDemo() {
-  const data = await fetch("./src/example_data/data.json").then((r) =>
-    r.json()
-  );
+  const data = await fetch("data.json").then((r) => r.json());
 
   const containerDiv = document.getElementById("plot");
   const vis = new FermiVisualiser(containerDiv, data, {

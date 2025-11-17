@@ -6,7 +6,8 @@ import json
 from bxsf import parse_bxsf
 from BrillouinZone import BrillouinZoneData
 
-# function to take a list of planes and return a set of unique planes.
+
+# --- Helper methods to improve the visualiser clipping algorithm --- #
 def deduplicate_planes(faces, planes, tol=1e-6):   
     unique_planes = []
     unique_faces = []
@@ -30,7 +31,49 @@ def deduplicate_planes(faces, planes, tol=1e-6):
 
     return unique_faces, unique_planes
 
+def estimate_plane_clipping_impact(plane, bbox_corners):
+    normal = np.array(plane["normal"])
+    D = plane["D"]
 
+    # Compute signed distances for all 8 corners
+    dists = [np.dot(normal, corner) - D for corner in bbox_corners]
+
+    # A plane where all corners are inside does nothing
+    if all(d <= 0 for d in dists):
+        return 0
+
+    # Count how many are outside (> 0)
+    outside_count = sum(d > 0 for d in dists)
+
+    # You can also weight by distance, not just count
+    impact = sum(max(0, d) for d in dists)
+
+    return impact
+
+
+def sort_faces_and_planes_by_impact(faces, planes, min_corner, max_corner):
+    # Compute the 8 corners of the bounding box
+    xs = [min_corner[0], max_corner[0]]
+    ys = [min_corner[1], max_corner[1]]
+    zs = [min_corner[2], max_corner[2]]
+    bbox_corners = np.array([[x, y, z] for x in xs for y in ys for z in zs])
+
+    # Pair faces and planes with impact
+    paired = []
+    for face, plane in zip(faces, planes):
+        impact = estimate_plane_clipping_impact(plane, bbox_corners)
+        paired.append((face, plane, impact))
+
+    # Sort descending (planes impacting the most first)
+    paired_sorted = sorted(paired, key=lambda x: x[2], reverse=True)
+
+    # Extract sorted faces and planes
+    faces_sorted = [p[0] for p in paired_sorted]
+    planes_sorted = [p[1] for p in paired_sorted]
+
+    return faces_sorted, planes_sorted
+
+# --- Main export function --- #
 def export_multiple_scalar_fields_with_edges_to_json(
     scalar_fields_bz, band_names, bz: BrillouinZoneData, min_corner, max_corner, path
 ):
@@ -71,11 +114,16 @@ def export_multiple_scalar_fields_with_edges_to_json(
             }
         })
 
+    # add some (probably too much) geometry information to the data object
+    # it equates to a small fraction of the total file but some large perf gains can be made.
     vertices, edges = bz.get_bz_outline_edges()
     _v, faces, planes = bz.get_bz_faces_with_planes()
+    # deduplicating equivalent planes reduces mesh cleavage
     faces_unique, planes_unique = deduplicate_planes(faces, planes)
     print(f"Original: {len(faces)} faces, {len(planes)} planes")
     print(f"Deduplicated: {len(faces_unique)} faces, {len(planes_unique)} planes")
+    # sorting planes by how much of the grid they will cut processes the most expensive planes first.
+    faces_sorted, planes_sorted = sort_faces_and_planes_by_impact(faces_unique, planes_unique, min_corner, max_corner)
 
 
     data = {
@@ -85,8 +133,8 @@ def export_multiple_scalar_fields_with_edges_to_json(
             "vertices": np.round(vertices, 6).tolist(),
             "edges": [list(map(int, edge)) for edge in edges],
             "reciprocalVectors": np.round(bz.bxsf.reciprocal_vectors, 6).tolist(),
-            "faces": faces_unique,
-            "planes": planes_unique
+            "faces": faces_sorted,
+            "planes": planes_sorted
         }
     }
 

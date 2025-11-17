@@ -98,6 +98,7 @@ export function getFermiMesh3d(
     mesh.cells,
     planes
   );
+
   // old method (no clipping [since approximated at data level.])
   //const { positions, cells} = mesh;
 
