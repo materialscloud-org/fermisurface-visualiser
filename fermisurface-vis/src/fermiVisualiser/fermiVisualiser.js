@@ -9,6 +9,15 @@ export class FermiVisualiser {
     this.dataObject = dataObject;
     this.currentE = options.initialE ?? this.dataObject.fermiEnergy;
 
+    this.defaultMeshLighting = {
+      ambient: 1.0,
+      diffuse: 0.0,
+      specular: 0.0,
+      roughness: 0.0,
+      fresnel: 0,
+    };
+    this.meshLighting = options.meshLighting || this.defaultMeshLighting;
+
     // backend
     this.worker = new Worker(
       new URL("./fermiCacheWorker.js", import.meta.url),
@@ -98,7 +107,8 @@ export class FermiVisualiser {
         this.currentE,
         this.planes,
         colorPalette[idx % colorPalette.length],
-        field.name ?? `Band ${idx + 1}`
+        field.name ?? `Band ${idx + 1}`,
+        this.meshLighting
       )
     );
 
@@ -154,7 +164,8 @@ export class FermiVisualiser {
           E,
           this.planes,
           colorPalette[idx % colorPalette.length],
-          field.name ?? `Band ${idx + 1}`
+          field.name ?? `Band ${idx + 1}`,
+          this.meshLighting
         )
       );
       timeTaken = performance.now() - initialTime;
@@ -288,7 +299,8 @@ export class FermiVisualiser {
             E,
             this.planes,
             colorPalette[idx % colorPalette.length],
-            field.name ?? `Band ${idx + 1}`
+            field.name ?? `Band ${idx + 1}`,
+            this.meshLighting
           )
         );
         this.meshCache.set(roundedE, fields);

@@ -13,7 +13,8 @@ export function getFermiMesh3d(
   E,
   slicedPlanes = [],
   color = "#0000ff",
-  name = "Fermi Surface"
+  name = "Fermi Surface",
+  meshLighting = {}
 ) {
   const { dimensions, origin, spacing, minval, maxval, formattedScalarField } =
     scalarFieldInfo;
@@ -162,12 +163,6 @@ export function getFermiMesh3d(
     name,
     hoverinfo: "skip",
     showlegend: true,
-    lighting: {
-      ambient: 1.0,
-      diffuse: 0.0,
-      specular: 0.0,
-      roughness: 0.0,
-      fresnel: 0,
-    },
+    lighting: meshLighting,
   };
 }
