@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: mc-react-phonon-visualizer
+        working-directory: fermisurface-vis
 
     steps:
       - name: Checkout code
