@@ -1,0 +1,31 @@
+name: Publish the Javascript lib on NPM
+
+on:
+  push:
+    tags:
+      - "*" # trigger on any tag push
+
+jobs:
+  publish_npm:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mc-react-phonon-visualizer
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org/"
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

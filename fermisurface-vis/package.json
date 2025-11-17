@@ -1,20 +1,16 @@
 {
   "name": "fermivisplotly",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "index.js",
+  "module": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "isosurface": "^1.0.0",
-    "plotly.js": "^3.0.1",
     "plotly.js-dist": "^3.0.1",
+    "isosurface": "^1.0.0",
     "vite": "^7.0.3"
   }
 }
