@@ -7,7 +7,7 @@ export class FermiVisualiser {
   constructor(containerDiv, dataObject, options = {}) {
     this.containerDiv = containerDiv;
     this.dataObject = dataObject;
-    this.currentE = options.initialE ?? 5.5;
+    this.currentE = options.initialE ?? this.dataObject.fermiEnergy;
 
     // backend
     this.worker = new Worker(
@@ -25,6 +25,7 @@ export class FermiVisualiser {
 
     // TODO: should also preset the camera positon, to be looking down axis.
     this.defaultLayout = {
+      margin: { t: 20, b: 0, l: 0, r: 0 }, // remove extra spacing
       title: "Brillouin Zone + Scalar Fields",
       scene: {
         xaxis: { visible: false },

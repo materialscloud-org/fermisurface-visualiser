@@ -5,16 +5,13 @@ async function runDemo() {
   const data = await fetch("data.json").then((r) => r.json());
 
   const containerDiv = document.getElementById("plot");
-  const vis = new FermiVisualiser(containerDiv, data, {
-    initialE: 5.5,
-  });
+  const vis = new FermiVisualiser(containerDiv, data, {});
 
   // could be used to prebuild cache
   // vis.buildCacheByRange(3, 10, 0.1);
 
-  console.log(vis.meshCache);
-
   const EInput = document.getElementById("E");
+  EInput.value = Math.round(data.fermiEnergy * 10) / 10;
 
   const onUserInput = () => {
     const E = parseFloat(EInput.value);
