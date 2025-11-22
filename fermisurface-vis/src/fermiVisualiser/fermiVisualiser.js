@@ -1,5 +1,5 @@
 import Plotly from "plotly.js-dist";
-import { getBZTraces } from "./getBZ.js";
+import { getBZTraces, getBZVectorTraces } from "./getBZ.js";
 import { getFermiMesh3d } from "./getFS.js";
 import { colorPalette } from "../utils.js";
 
@@ -9,13 +9,19 @@ export class FermiVisualiser {
     this.dataObject = dataObject;
     this.currentE = options.initialE ?? this.dataObject.fermiEnergy;
 
+    this.bvectors = this.dataObject.brillouinZone.reciprocalVectors;
+
+    this.meshOpacity = options.meshOpacity ?? 0.95;
+
     this.defaultMeshLighting = {
-      ambient: 1.0,
-      diffuse: 0.0,
-      specular: 0.0,
-      roughness: 0.0,
-      fresnel: 0,
+      ambient: 0.6,
+      diffuse: 0.8,
+      specular: 0.6,
+      roughness: 0.3,
+      fresnel: 0.2,
+      lightposition: { x: 50, y: 100, z: 150 },
     };
+
     this.meshLighting = options.meshLighting || this.defaultMeshLighting;
 
     // backend
@@ -27,6 +33,8 @@ export class FermiVisualiser {
     );
 
     this.bzEdgesTrace = null;
+    this.bvectorTraces = null;
+
     this.scalarFieldTraces = null;
     this.plotInitialized = false;
 
@@ -101,15 +109,18 @@ export class FermiVisualiser {
     });
     this.bzEdgesTrace.showlegend = false;
 
+    this.bvectorTraces = getBZVectorTraces(this.bvectors);
+
     this.scalarFieldTraces = this.dataObject.scalarFields.map((field, idx) =>
-      getFermiMesh3d(
-        field.scalarFieldInfo,
-        this.currentE,
-        this.planes,
-        colorPalette[idx % colorPalette.length],
-        field.name ?? `Band ${idx + 1}`,
-        this.meshLighting
-      )
+      getFermiMesh3d({
+        scalarFieldInfo: field.scalarFieldInfo,
+        E: this.currentE,
+        slicedPlanes: this.planes,
+        color: colorPalette[idx % colorPalette.length],
+        meshOpacity: 0.95,
+        meshLighting: this.meshLighting,
+        name: field.name ?? `Band ${idx + 1}`,
+      })
     );
 
     // set in cache
@@ -117,7 +128,7 @@ export class FermiVisualiser {
 
     await Plotly.newPlot(
       this.containerDiv,
-      [this.bzEdgesTrace, ...this.scalarFieldTraces],
+      [this.bzEdgesTrace, ...this.bvectorTraces, ...this.scalarFieldTraces],
       this.defaultLayout,
       this.defaultConfig
     );
@@ -159,14 +170,15 @@ export class FermiVisualiser {
     } else {
       // recalculate mesh.
       scalarFieldMesh = this.dataObject.scalarFields.map((field, idx) =>
-        getFermiMesh3d(
-          field.scalarFieldInfo,
-          E,
-          this.planes,
-          colorPalette[idx % colorPalette.length],
-          field.name ?? `Band ${idx + 1}`,
-          this.meshLighting
-        )
+        getFermiMesh3d({
+          scalarFieldInfo: field.scalarFieldInfo,
+          E: E,
+          slicedPlanes: this.planes,
+          color: colorPalette[idx % colorPalette.length],
+          meshOpacity: 0.95,
+          meshLighting: this.meshLighting,
+          name: field.name ?? `Band ${idx + 1}`,
+        })
       );
       timeTaken = performance.now() - initialTime;
       // add to cache
@@ -209,7 +221,11 @@ export class FermiVisualiser {
     }
 
     this.scalarFieldMesh = scalarFieldMesh;
-    const newTraces = [this.bzEdgesTrace, ...this.scalarFieldMesh];
+    const newTraces = [
+      this.bzEdgesTrace,
+      ...this.bvectorTraces,
+      ...this.scalarFieldMesh,
+    ];
 
     // apply visibility state.
     for (let i = 0; i < newTraces.length; i++) {
@@ -294,14 +310,15 @@ export class FermiVisualiser {
       const roundedE = parseFloat(E.toFixed(3));
       if (!this.meshCache.has(roundedE)) {
         const fields = this.dataObject.scalarFields.map((field, idx) =>
-          getFermiMesh3d(
-            field.scalarFieldInfo,
-            E,
-            this.planes,
-            colorPalette[idx % colorPalette.length],
-            field.name ?? `Band ${idx + 1}`,
-            this.meshLighting
-          )
+          getFermiMesh3d({
+            scalarFieldInfo: field.scalarFieldInfo,
+            E: E,
+            slicedPlanes: this.planes,
+            color: colorPalette[idx % colorPalette.length],
+            meshOpacity: 0.95,
+            meshLighting: this.meshLighting,
+            name: field.name ?? `Band ${idx + 1}`,
+          })
         );
         this.meshCache.set(roundedE, fields);
       }
@@ -339,7 +356,11 @@ export class FermiVisualiser {
 
         // Optional: update plot if this is the currently selected E
         if (Math.abs(this.currentE - roundedE) < 1e-6 && this.plotInitialized) {
-          const newTraces = [this.bzEdgesTrace, ...meshes];
+          const newTraces = [
+            this.bzEdgesTrace,
+            ...this.bvectorTraces,
+            ...meshes,
+          ];
           Plotly.react(this.containerDiv, newTraces, this.defaultLayout);
         }
       };

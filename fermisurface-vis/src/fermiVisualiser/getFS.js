@@ -4,18 +4,20 @@ import { clipMeshToPlanes } from "./clipMeshOpt.js";
 
 // Own hopefully fast and bug free implementation
 //  (about 10-20% faster than the isosurface impl.)
+// TODO - look into whether we can run a wasm module to do this.
+// might be difficult with the time to init wasm modules.
 import { marchingCubes } from "./marchingCubes.js";
-// isosurface
 // import { marchingCubes } from "isosurface";
 
-export function getFermiMesh3d(
+export function getFermiMesh3d({
   scalarFieldInfo,
   E,
   slicedPlanes = [],
   color = "#0000ff",
+  meshOpacity = 0.95,
+  meshLighting = {},
   name = "Fermi Surface",
-  meshLighting = {}
-) {
+}) {
   const { dimensions, origin, spacing, minval, maxval, formattedScalarField } =
     scalarFieldInfo;
 
@@ -30,18 +32,12 @@ export function getFermiMesh3d(
       j: [0],
       k: [0],
       color,
-      opacity: 0.5,
-      flatshading: true,
+      opacity: meshOpacity,
+      flatshading: false,
       name,
       hoverinfo: "skip",
       showlegend: true,
-      lighting: {
-        ambient: 1.0,
-        diffuse: 0.0,
-        specular: 0.0,
-        roughness: 0.0,
-        fresnel: 0,
-      },
+      lighting: {},
     };
   }
 
@@ -158,7 +154,7 @@ export function getFermiMesh3d(
     j,
     k,
     color,
-    opacity: 0.5,
+    opacity: 0.95,
     flatshading: true,
     name,
     hoverinfo: "skip",
