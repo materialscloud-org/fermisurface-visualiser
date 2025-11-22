@@ -19,7 +19,7 @@ export class FermiVisualiser {
       specular: 0.6,
       roughness: 0.3,
       fresnel: 0.2,
-      lightposition: { x: 50, y: 100, z: 150 },
+      lightposition: { x: 0, y: 0, z: 0 },
     };
 
     this.meshLighting = options.meshLighting || this.defaultMeshLighting;
